@@ -3,7 +3,7 @@ setup(
   name = 'streamsx.database',
   packages = ['streamsx.database'],
   include_package_data=True,
-  version = '0.1.0',
+  version = '0.1.1',
   description = 'IBM Streams Database integration',
   long_description = open('DESC.txt').read(),
   author = 'IBM Streams @ github.com',

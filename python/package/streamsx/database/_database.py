@@ -4,7 +4,7 @@
 
 import datetime
 import requests
-
+from tempfile import gettempdir
 import streamsx.spl.op
 import streamsx.spl.types
 from streamsx.topology.schema import CommonSchema, StreamSchema
@@ -15,7 +15,8 @@ def _add_driver_file(topology):
     url = "https://github.com/IBMStreams/streamsx.jdbc/raw/master/samples/JDBCSample/opt/db2jcc4.jar"
     r = requests.get(url)
     filename = 'db2jcc4.jar'
-    tmpfile = '/tmp/' + filename
+    tmpdirname = gettempdir()
+    tmpfile = tmpdirname + '/' + filename
     with open(tmpfile, 'wb') as fd:
         for chunk in r.iter_content(chunk_size=128):
             fd.write(chunk)
