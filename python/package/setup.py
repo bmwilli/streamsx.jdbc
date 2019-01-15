@@ -1,9 +1,10 @@
 from setuptools import setup
+import streamsx.database
 setup(
   name = 'streamsx.database',
   packages = ['streamsx.database'],
   include_package_data=True,
-  version = '0.1.1',
+  version = streamsx.database.__version__,
   description = 'IBM Streams Database integration',
   long_description = open('DESC.txt').read(),
   author = 'IBM Streams @ github.com',
@@ -12,7 +13,7 @@ setup(
   url = 'https://github.com/IBMStreams/streamsx.database',
   keywords = ['streams', 'ibmstreams', 'streaming', 'analytics', 'streaming-analytics', 'db2', 'database'],
   classifiers = [
-    'Development Status :: 1 - Planning',
+    'Development Status :: 3 - Alpha',
     'License :: OSI Approved :: Apache Software License',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.5',

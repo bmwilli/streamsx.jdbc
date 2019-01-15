@@ -41,5 +41,7 @@ A simple hello world example of a Streams application that creates a table, inse
 
 """
 
+__version__='0.2.0'
+
 __all__ = ['run_statement']
 from streamsx.database._database import run_statement
