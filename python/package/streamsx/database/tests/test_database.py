@@ -7,6 +7,7 @@ from streamsx.topology.tester import Tester
 from streamsx.topology.schema import CommonSchema, StreamSchema
 import streamsx.spl.op as op
 import streamsx.spl.toolkit
+import streamsx.rest as sr
 
 import datetime
 import os
@@ -20,6 +21,14 @@ import json
 ##
 
 class TestDB(TestCase):
+
+    @classmethod
+    def setUpClass(self):
+        # start streams service
+        connection = sr.StreamingAnalyticsConnection()
+        service = connection.get_streaming_analytics()
+        result = service.start_instance()
+
     def setUp(self):
         Tester.setup_streaming_analytics(self, force_remote_build=True)
 
