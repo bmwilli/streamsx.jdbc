@@ -19,6 +19,14 @@ Credentials
 
 Db2 Warehouse credentials are defined using service credentials JSON.
 
+The mandatory JSON elements are "username", "password" and "jdbcurl"::
+
+    {
+        "username": "<JDBC_USER>",
+        "password": "<JDBC_PASSWORD>",
+        "jdbcurl":  "<JDBC_URL>"
+    }
+
 Sample
 ++++++
 
@@ -41,7 +49,7 @@ A simple hello world example of a Streams application that creates a table, inse
 
 """
 
-__version__='0.3.0'
+__version__='0.3.1'
 
 __all__ = ['run_statement']
 from streamsx.database._database import run_statement
