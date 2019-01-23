@@ -4,6 +4,7 @@
 
 import datetime
 import requests
+import os
 from tempfile import gettempdir
 import streamsx.spl.op
 import streamsx.spl.types
@@ -11,16 +12,19 @@ from streamsx.topology.schema import CommonSchema, StreamSchema
 from streamsx.spl.types import rstring
 
 
-def _add_driver_file(topology):
-    url = "https://github.com/IBMStreams/streamsx.jdbc/raw/master/samples/JDBCSample/opt/db2jcc4.jar"
+def _add_driver_file_from_url(topology, url, filename):
     r = requests.get(url)
-    filename = 'db2jcc4.jar'
     tmpdirname = gettempdir()
     tmpfile = tmpdirname + '/' + filename
     with open(tmpfile, 'wb') as fd:
         for chunk in r.iter_content(chunk_size=128):
             fd.write(chunk)
     topology.add_file_dependency(tmpfile, 'opt')
+    return 'opt/'+filename
+
+def _add_driver_file(topology, path):
+    filename = os.path.basename(path)
+    topology.add_file_dependency(path, 'opt')
     return 'opt/'+filename
 
 def _read_db2_credentials(credentials):
@@ -35,11 +39,14 @@ def _read_db2_credentials(credentials):
         raise TypeError(credentials)
     return jdbcurl, username, password
     
-def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None, sql_params=None, transaction_size=1, name=None):
+def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None, sql_params=None, transaction_size=1, jdbc_driver_class='com.ibm.db2.jcc.DB2Driver', jdbc_driver_lib=None, name=None):
     """Runs a SQL statement using DB2 client driver and JDBC database interface.
 
     The statement is called once for each input tuple received. Result sets that are produced by the statement are emitted as output stream tuples.
-    This function includes the JDBC driver for DB2 database ('com.ibm.db2.jcc.DB2Driver') in the application bundle.
+    
+    This function includes the JDBC driver for DB2 database ('com.ibm.db2.jcc.DB2Driver') in the application bundle per default.
+
+    Different drivers, e.g. for other databases than DB2, can be applied and the parameters ``jdbc_driver_class`` and ``jdbc_driver_lib`` must be specified.
     
     Supports two ways to specify the statement:
 
@@ -63,7 +70,9 @@ def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None
         sql(str): String containing the SQL statement. Use this as alternative option to ``sql_attribute`` parameter.
         sql_attribute(str): Name of the input stream attribute containing the SQL statement. Use this as alternative option to ``sql`` parameter.
         sql_params(str): The values of SQL statement parameters. These values and SQL statement parameter markers are associated in lexicographic order. For example, the first parameter marker in the SQL statement is associated with the first sql_params value.
-        transaction_size(int): The number of tuples to commit per transaction. The default value is 1.      
+        transaction_size(int): The number of tuples to commit per transaction. The default value is 1.
+        jdbc_driver_class(str): The default driver is for DB2 database 'com.ibm.db2.jcc.DB2Driver'.
+        jdbc_driver_lib(str): Path to the JDBC driver library file. Specify the jar filename with absolute path, containing the class given with ``jdbc_driver_class`` parameter. Per default the 'db2jcc4.jar' is added to the 'opt' directory in the application bundle.
         name(str): Sink name in the Streams context, defaults to a generated name.
 
     Returns:
@@ -75,6 +84,9 @@ def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None
             sql_attribute = 'string'
         else:
             raise ValueError("Either sql_attribute or sql parameter must be set.")
+
+    if jdbc_driver_lib is None and jdbc_driver_class != 'com.ibm.db2.jcc.DB2Driver':
+        raise ValueError("Parameter jdbc_driver_lib must be specified containing the class from jdbc_driver_class parameter.")
 
     if schema is None:
         schema = stream.oport.schema
@@ -88,8 +100,12 @@ def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None
         _op.params['statement'] = sql
     if sql_params is not None:
         _op.params['statementParamAttrs'] = sql_params
-    _op.params['jdbcClassName'] = 'com.ibm.db2.jcc.DB2Driver'
-    _op.params['jdbcDriverLib'] = _add_driver_file(stream.topology)
+   
+    _op.params['jdbcClassName'] = jdbc_driver_class
+    if jdbc_driver_lib is None:
+        _op.params['jdbcDriverLib'] = _add_driver_file_from_url(stream.topology, 'https://github.com/IBMStreams/streamsx.jdbc/raw/master/samples/JDBCSample/opt/db2jcc4.jar', 'db2jcc4.jar')
+    else:
+        _op.params['jdbcDriverLib'] = _add_driver_file(stream.topology, jdbc_driver_lib)
 
     return _op.outputs[0]
 
