@@ -39,6 +39,7 @@ def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None
     """Runs a SQL statement using DB2 client driver and JDBC database interface.
 
     The statement is called once for each input tuple received. Result sets that are produced by the statement are emitted as output stream tuples.
+    This function includes the JDBC driver for DB2 database ('com.ibm.db2.jcc.DB2Driver') in the application bundle.
     
     Supports two ways to specify the statement:
 
@@ -62,7 +63,7 @@ def run_statement(stream, credentials, schema=None, sql=None, sql_attribute=None
         sql(str): String containing the SQL statement. Use this as alternative option to ``sql_attribute`` parameter.
         sql_attribute(str): Name of the input stream attribute containing the SQL statement. Use this as alternative option to ``sql`` parameter.
         sql_params(str): The values of SQL statement parameters. These values and SQL statement parameter markers are associated in lexicographic order. For example, the first parameter marker in the SQL statement is associated with the first sql_params value.
-        transaction_size(int): Size of the bulk to submit to Elasticsearch. The default value is 1.      
+        transaction_size(int): The number of tuples to commit per transaction. The default value is 1.      
         name(str): Sink name in the Streams context, defaults to a generated name.
 
     Returns:
