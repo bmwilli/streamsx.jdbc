@@ -1,4 +1,3 @@
-from unittest import TestCase
 
 import streamsx.database as db
 
@@ -9,6 +8,7 @@ import streamsx.spl.op as op
 import streamsx.spl.toolkit
 import streamsx.rest as sr
 
+import unittest
 import datetime
 import os
 import json
@@ -19,9 +19,23 @@ import json
 ## Streaming analytics service running
 ## DB2 Warehouse service credentials are located in a file referenced by environment variable DB2_CREDENTIALS
 ##
+def toolkit_env_var():
+    result = True
+    try:
+        os.environ['STREAMS_JDBC_TOOLKIT']
+    except KeyError: 
+        result = False
+    return result
 
+def streams_install_env_var():
+    result = True
+    try:
+        os.environ['STREAMS_INSTALL']
+    except KeyError: 
+        result = False
+    return result
 
-class TestParams(TestCase):
+class TestParams(unittest.TestCase):
 
     def test_bad_lib_param(self):
         creds_file = os.environ['DB2_CREDENTIALS']
@@ -34,7 +48,7 @@ class TestParams(TestCase):
         # expect ValueError because jdbc_driver_lib is not a valid file
         self.assertRaises(ValueError, db.run_statement, s, credentials, jdbc_driver_class='com.any.DBDriver', jdbc_driver_lib='_any_invalid_file_')
 
-class TestDB(TestCase):
+class TestDB(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
@@ -50,7 +64,7 @@ class TestDB(TestCase):
         creds_file = os.environ['DB2_CREDENTIALS']
         with open(creds_file) as data_file:
             credentials = json.load(data_file)
-        topo = Topology('test_String_input')
+        topo = Topology('test_string_type')
 
         sql_create = 'CREATE TABLE STR_SAMPLE (A CHAR(10), B CHAR(10))'
         sql_insert = 'INSERT INTO STR_SAMPLE (A, B) VALUES (\'hello\', \'world\')'
@@ -63,18 +77,36 @@ class TestDB(TestCase):
         #tester.run_for(60)
         tester.test(self.test_ctxtype, self.test_config)
 
-    def test_string_type_with_driver_param(self):
-        try:
-            streams_install = os.environ['STREAMS_INSTALL']
-        except KeyError: 
-            print("Skip test case since STREAMS_INSTALL is not set.")
-            return
-        jdbc_driver_lib=streams_install+'/samples/com.ibm.streamsx.jdbc/JDBCSample/opt/db2jcc4.jar'
-
+    @unittest.skipIf(toolkit_env_var() == False, "Missing STREAMS_JDBC_TOOLKIT environment variable.")
+    def test_local_tk(self):
+        jdbc_toolkit = os.environ['STREAMS_JDBC_TOOLKIT']
         creds_file = os.environ['DB2_CREDENTIALS']
         with open(creds_file) as data_file:
             credentials = json.load(data_file)
-        topo = Topology('test_String_input_driver')
+        topo = Topology('test_local_tk')
+        # use toolkit applied with STREAMS_JDBC_TOOLKIT env var
+        streamsx.spl.toolkit.add_toolkit(topo, jdbc_toolkit)
+
+        sql_create = 'CREATE TABLE STR_SAMPLE (A CHAR(10), B CHAR(10))'
+        sql_insert = 'INSERT INTO STR_SAMPLE (A, B) VALUES (\'hello\', \'world\')'
+        sql_drop = 'DROP TABLE STR_SAMPLE'
+        s = topo.source([sql_create, sql_insert, sql_drop]).as_string()
+        res_sql = db.run_statement(s, credentials)
+        res_sql.print()
+        tester = Tester(topo)
+        tester.tuple_count(res_sql, 3)
+        #tester.run_for(60)
+        tester.test(self.test_ctxtype, self.test_config)
+
+
+    @unittest.skipIf(streams_install_env_var() == False, "Missing STREAMS_INSTALL environment variable.")
+    def test_string_type_with_driver_param(self):
+        streams_install = os.environ['STREAMS_INSTALL']
+        jdbc_driver_lib=streams_install+'/samples/com.ibm.streamsx.jdbc/JDBCSample/opt/db2jcc4.jar'
+        creds_file = os.environ['DB2_CREDENTIALS']
+        with open(creds_file) as data_file:
+            credentials = json.load(data_file)
+        topo = Topology('test_string_type_with_driver_param')
 
         sql_create = 'CREATE TABLE STR_SAMPLE (A CHAR(10), B CHAR(10))'
         sql_insert = 'INSERT INTO STR_SAMPLE (A, B) VALUES (\'hello\', \'world\')'
@@ -94,7 +126,7 @@ class TestDB(TestCase):
             credentials = json.load(data_file)
         topo = Topology()
 
-        topo = Topology('test_SPLBeacon_Functor_JDBC')
+        topo = Topology('test_mixed_types')
         pulse = op.Source(topo, "spl.utility::Beacon", 'tuple<rstring A, rstring B>', params = {'iterations':1})
         pulse.A = pulse.output('"hello"')
         pulse.B = pulse.output('"world"')
